@@ -9,6 +9,7 @@ import sendOtpMail from "../utils/sendMail.js"
 import settingsModel from "../models/settings.model.js";
 import sessionModel from "../models/session.model.js";
 import { generateAccessToken, generateRefreshToken, generateResetPasswordToken } from "../utils/grnrateTokens.js";
+import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from "../utils/dateUtil.js";
 
 
 
@@ -122,6 +123,7 @@ export const verifyOtp = async (req, res) => {
             success: true,
             token: accessToken,
             sessionId: session._id,
+            expiresAt: formatDateTimeDDMMYYYY(expiresAt)
         })
 
     } catch (error) {
@@ -165,6 +167,7 @@ export const login = async (req, res) => {
             success: true,
             token: accessToken,
             sessionId: session._id,
+            expiresAt: formatDateTimeDDMMYYYY(expiresAt)
         })
     } catch (error) {
         console.log(error)
@@ -181,7 +184,13 @@ export const resendOtp = async (req, res) => {
 
         const user = await userModel.findOne({ email })
         if (!user) { return res.status(400).json({ success: false, message: "user not found" }) }
-        if (user.isVerified === true) { return res.status(400).json({ success: false, message: "user alrady registerd, please try to login" }) }
+        if (purpose === "register" && user.isVerified === true) {
+            return res.status(400).json({ success: false, message: "user alrady registerd, please try to login" })
+        }
+
+        if (purpose === "reset-password" && user.isVerified === false) {
+            return res.status(400).json({ success: false, message: "user not verified, please register first" })
+        }
 
         const otpFile = await otpModel.findOne({ email })
         if (!otpFile) { return res.status(400).json({ success: false, message: "inavalid user, otp not found" }) }
@@ -214,7 +223,7 @@ export const refershAccToken = async (req, res) => {
         const refreshToken = req.cookies.refreshToken
         if (!refreshToken) { return res.status(400).json({ success: false, message: "reftoken not found" }) }
 
-        const decoded = jwt.verify(refreshToken, config.JWT_REFRESH_SECRET)
+        const decoded = jwt.verify(refreshToken, config.REFRESH_TOKEN_SECRET)
         const userId = decoded.userId
 
         const hashToken = crypto
@@ -271,7 +280,7 @@ export const logout = async (req, res) => {
 
         let userId
         try {
-            const decoded = jwt.verify(refreshToken, config.JWT_REFRESH_SECRET)
+            const decoded = jwt.verify(refreshToken, config.REFRESH_TOKEN_SECRET)
             userId = decoded.userId
         } catch (error) {
             res.clearCookie("refreshToken", {
@@ -319,7 +328,7 @@ export const logoutFromAnywhere = async (req, res) => {
         const refreshToken = req.cookies.refreshToken
         if (!refreshToken) { return res.status(400).json({ success: false, message: "No active session" }) }
 
-        const decoded = jwt.verify(refreshToken, config.JWT_REFRESH_SECRET)
+        const decoded = jwt.verify(refreshToken, config.REFRESH_TOKEN_SECRET)
 
         await sessionModel.updateMany(
             { userId: decoded.userId, revoked: false },
@@ -402,7 +411,7 @@ export const verifyPasswordReset = async (req, res) => {
 
         const otpFile = await otpModel.findOne({ email, purpose: "reset-password" })
         if (!otpFile) { return res.status(400).json({ success: false, message: "otp not found" }) }
-        if (otpFile.purpose !== "reset-password"){ return res.status(400).json({success: false, message: "Invalid OTP request"}) }
+        if (otpFile.purpose !== "reset-password") { return res.status(400).json({ success: false, message: "Invalid OTP request" }) }
 
         if (otpFile.attempts >= 10) {
             await otpModel.deleteOne({ _id: otpFile._id })
@@ -468,6 +477,17 @@ export const resetPassword = async (req, res) => {
             secure: config.NODE_ENV === "production",
             sameSite: "strict"
         })
+
+        res.clearCookie("refreshToken", {
+            httpOnly: true,
+            secure: config.NODE_ENV === "production",
+            sameSite: "strict"
+        })
+
+        await sessionModel.updateMany(
+            { userId: decoded.userId, revoked: false },
+            { $set: { revoked: true } }
+        );
 
         return res.status(200).json({
             success: true,
