@@ -20,20 +20,26 @@ import {
     verifyPasswordResetValidation,
     resetPasswordValidation
 } from "../middlewares/validator/auth.validation.js";
-import { resendOtpLimiter, authLimiter } from "../middlewares/rateLimitter.js";
+import { resendOtpLimiter, authLimiter, refTokenLimiter } from "../middlewares/rateLimitter.js";
 
 const router = express.Router()
 
+// * SINGUP
 router.post("/register", authLimiter, registerValidation, register);
-router.post("/login", authLimiter, loginValidation, login);
 router.post("/verify-otp", authLimiter, otpValidation, verifyOtp);
 
+// * LOGIN
+router.post("/login", authLimiter, loginValidation, login);
+
+// * LOGOUTS
 router.post("/logout", authLimiter, logout);
 router.post("/logout-from-anywhere", authLimiter, logoutFromAnywhere);
 
-router.post("/refresh-token", authLimiter, refershAccToken);
+// * UTILITES
+router.post("/refresh-token", refTokenLimiter, refershAccToken);
 router.post("/resend-otp", resendOtpLimiter, resendOtpValidation, resendOtp);
 
+// * PASS REST FLOW
 router.post("/request-password-reset", authLimiter, requestPasswordResetValidation, requestPasswordReset);
 router.post("/verify-password-reset", authLimiter, verifyPasswordResetValidation, verifyPasswordReset);
 router.post("/reset-password", authLimiter, resetPasswordValidation, resetPassword);

@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+
+// * AUTH - SING-UP
 export const registerValidation = (req, res, next) => {
     const schema = z.object({
         username: z
@@ -33,6 +35,7 @@ export const registerValidation = (req, res, next) => {
     next()
 }
 
+// * AUTH - LOGIN
 export const loginValidation = (req, res, next) => {
     const schema = z.object({
         email: z
@@ -57,6 +60,7 @@ export const loginValidation = (req, res, next) => {
     next()
 }
 
+// * AUTH - OTP-VALIDATION
 export const otpValidation = (req, res, next) => {
     const schema = z.object({
         email: z
@@ -81,6 +85,7 @@ export const otpValidation = (req, res, next) => {
     next()
 }
 
+// * AUTH - RESEND-OTP
 export const resendOtpValidation = (req, res, next) => {
     const schema = z.object({
         email: z
@@ -108,6 +113,7 @@ export const resendOtpValidation = (req, res, next) => {
     next()
 }
 
+// * AUTH - REQUEST-PASS-RESET
 export const requestPasswordResetValidation = (req, res, next) => {
     const schema = z.object({
         email: z
@@ -131,6 +137,7 @@ export const requestPasswordResetValidation = (req, res, next) => {
     next()
 }
 
+// * AUTH - VERIFY-PASS-RESET
 export const verifyPasswordResetValidation = (req, res, next) => {
     const schema = z.object({
         email: z
@@ -155,6 +162,7 @@ export const verifyPasswordResetValidation = (req, res, next) => {
     next()
 }
 
+// * AUTH - PASS-REST
 export const resetPasswordValidation = (req, res, next) => {
     const schema = z.object({
         newPassword: z

@@ -8,9 +8,20 @@ const sessionSchema = new mongoose.Schema({
         required: true,
         index: true,
     },
+
+    browser: { type: String, required: true },
+    diviceId: { type: String, required: true },
+    location: { type: String, required: true },
+    lastTime: { type: Date, required: true },
+    os: { type: String, required: true },
+
     refreshTokenHash: {type: String, required: true},
+    previousRefreshTokenHash: { type: String, default: null },
+    previousTokenExpiresAt: { type: Date, default: null },
+
     userAgent:{ type: String, required: true},
     ipAddress: { type: String, required: true},
+
     expiresAt: { type: Date, required: true},
     revoked: { type: Boolean, default: false}
 }, { timestamps: true })

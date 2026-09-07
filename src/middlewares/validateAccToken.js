@@ -1,8 +1,7 @@
-import bcrypt from "bcryptjs";
-import crypto from "crypto"
 import jwt from "jsonwebtoken"
 import config from "../config/config.js";
 
+// * PROTAACTOR - OF - ROUTERS
 export const verifyUser = (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;

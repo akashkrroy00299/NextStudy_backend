@@ -1,25 +1,53 @@
 import express from "express";
+import cors from "cors";
 import cookieParser from "cookie-parser";
-import connectDB from "./src/lib/connectDB.js"
-import config from "./src/config/config.js"
+import connectDB from "./src/lib/connectDB.js";
+import config from "./src/config/config.js";
 
 // Routers
-import authRouter from "./src/routers/auth.router.js";
-import attendanceRouter from "./src/routers/attendance.router.js"
+import authRouter from "./src/routers/auth.route.js";
+import userRouter from "./src/routers/userProfile.route.js";
+import attendanceRouter from "./src/routers/attendance.route.js";
+import todosRouter from "./src/routers/todos.route.js";
+
+// Background Cron Jobs
+import startExpireTodosJob from "./src/jobs/startExpireTodosJob.js";
 
 const app = express();
+
+app.use(cors({
+  origin: "http://localhost:5173",
+  credentials: true,
+}));
+
 app.use(cookieParser());
 app.use(express.json());
 
-connectDB()
-
+// auth
 app.use("/api/auth", authRouter);
 
+// user
+app.use("/api/user", userRouter);
+
 // Activites
-app.use("/api/activites/attendance", attendanceRouter)
+app.use("/api/activites/attendance", attendanceRouter);
+app.use("/api/todos", todosRouter);
 
 const PORT = config.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+const startServer = async () => {
+  try {
+    await connectDB();
+
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+
+    startExpireTodosJob();
+  } catch (error) {
+    console.log("Failed to start server:", error);
+    process.exit(1);
+  }
+};
+
+startServer();

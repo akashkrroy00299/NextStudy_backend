@@ -31,7 +31,10 @@ const subjectSchema = new mongoose.Schema({
     subjects: [
         {
             title: { type: String, required: true },
-            subjectId: { type: String, required: true }
+            subjectId: { type: String, required: true },
+            dayOfWeek: [
+                { type: Number , min: 0, max: 6 }
+            ]
         }
     ]
 });

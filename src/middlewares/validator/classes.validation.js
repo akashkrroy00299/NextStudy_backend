@@ -22,12 +22,14 @@ export const classSchema = z.object({
   path: ["end"],
 })
 
-const schema = z.object({
-  classes: z.array(classSchema)
+export const schema = z.object({
+  clses: z.array(classSchema)
     .min(1, "At least one class is required")
     .max(100, "Too many classes in one request"),
 })
 
+
+// * ATTEND - SECTION 01 - UPDATE-CLASS
 export const updateClassesValidation = (schema) => (req, res, next) => {
   const result = schema.safeParse(req.body)
 
@@ -44,42 +46,8 @@ export const updateClassesValidation = (schema) => (req, res, next) => {
   next()
 }
 
-export const updateSubjectsValidation = (req, res, next) => {
-  const schema = z.object({
-    subjects: z
-      .array(
-        z.object({
-          subjectId: z.string().uuid("Invalid subject ID"),
-          title: z
-            .string()
-            .trim()
-            .min(1, "Subject title is required")
-            .max(50, "Subject title is too long"),
-        })
-      )
-      .min(1, "Subjects can't be empty")
-      .max(50, "Too many subjects"),
-  })
 
-  const result = schema.safeParse(req.body)
-
-  if (!result.success) {
-    console.log(
-      "Zod Error Details:",
-      result.error.flatten().fieldErrors
-    )
-
-    return res.status(400).json({
-      success: false,
-      message: "Bad request",
-      errors: result.error.flatten().fieldErrors,
-    })
-  }
-
-  req.body = result.data
-  next()
-}
-
+// * ATTEND - SECTION 01 - ATTENS-LOG
 export const attendanceValidation = (req, res, next) => {
   const schema = z.object({
     subjectId: z.string().trim().uuid(),

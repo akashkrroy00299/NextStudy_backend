@@ -1,33 +1,43 @@
 import mongoose from "mongoose";
 
-const settingsSchema = new mongoose.Schema({
+const settingsSchema = new mongoose.Schema(
+  {
     userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
-        unique: true
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      unique: true,
     },
-    theme: {
-        type: String,
-        default: "LIGHT",
-        enum: ["LIGHT", "DARK"],
-    },
-    notification: {
-        isActive: { type: Boolean, default: true },
-        silent: { type: Boolean, default: false }
-    },
-    language: {
-        type: String, 
-        default: "ENG",
-        enum: ["ENG", "SPA", "JAP"]
-    },
-    timezone: { type: String, default: "Aisa/Kolkata" },
-    privacy: {
-        type: String,
-        enum: ["public", "private"],
-        default: "public"
-    }
-}, { timestamps: true })
 
-const settingsModel = mongoose.model("Settings", settingsSchema )
-export default settingsModel
+    //* APPEARANCE
+    theme: { type: String, default: "LIGHT", enum: ["LIGHT", "DARK"] },
+    animations: { type: Boolean, default: true },
+    navigation: { type: String, enum: ["def", "drg"], default: "def" },
+    textSize: { type: String, enum: ["def", "sml", "big"], default: "def" },
+
+    //* REMINDERS
+    attendanceReminder: { type: Boolean, default: false },
+    examReminder: { type: Boolean, default: false },
+    todoReminder: { type: Boolean, default: false },
+    assignmentReminder: { type: Boolean, default: false },
+    weeklySummary: { type: Boolean, default: false },
+
+    //* AUTHENTICATION
+    authLoginVerificationByOtp: { type: Boolean, default: false },
+
+    language: { type: String, default: "ENG", enum: ["ENG", "SPA", "JAP"] },
+    timezone: { type: String, default: "Asia/Kolkata" },
+    privacy: { type: String, enum: ["public", "private"], default: "public" },
+
+    //* TODOS
+    todoCategory: {
+      type: [{ name: String }],
+      default: [{ name: "Personal" }, { name: "Work" }],
+    },
+    fatchCompletedTodoLimit: { type: Number, default: 10 }
+  },
+  { timestamps: true }
+);
+
+const settingsModel = mongoose.model("Settings", settingsSchema);
+export default settingsModel;
