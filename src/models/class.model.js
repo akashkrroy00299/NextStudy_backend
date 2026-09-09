@@ -18,7 +18,7 @@ const classSchema = new mongoose.Schema({
         trim: true,
     },
 
-    color : {
+    color: {
         type: String,
         required: true,
     },
@@ -46,9 +46,11 @@ const classSchema = new mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true,
-    }
+    },
 
-} , { timestamps: true })
+}, { timestamps: true })
+
+classSchema.index({ day: 1, start: 1 })
 
 const classModel = mongoose.model("Class", classSchema)
 export default classModel;

@@ -3,8 +3,8 @@ import mongoose from "mongoose"
 
 
 const classIdSchema = z.string().refine(
-  (val) => val.toLowerCase().startsWith("temp") || mongoose.Types.ObjectId.isValid(val),
-  { message: "_id must be a valid ObjectId or start with temp" }
+  (val) => val.toLowerCase().startsWith("temp-") || mongoose.Types.ObjectId.isValid(val),
+  { message: "_id must be a valid ObjectId or start with temp-" }
 )
 
 export const classSchema = z.object({

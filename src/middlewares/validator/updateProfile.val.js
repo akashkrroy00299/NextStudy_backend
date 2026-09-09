@@ -5,23 +5,42 @@ import { z } from 'zod';
 
 export const validateSettingsUpdate = (req, res, next) => {
     const schema = z.object({
-        updates: z.record(
-            z.string(),
-            z.union(
-                z.boolean(),
-                z.record(
-                    z.string(),
-                    z.union([
-                        z.string(),
-                        z.number(),
-                        z.boolean()
-                    ])
-                )
-            )
-        )
+        profile: z.object({
+            username: z.string().trim().min(3).max(29).optional(),
+            timezone: z.string().trim().min(1).max(100).optional(),
+        }).strict().optional(),
+        account: z.object({
+            username: z.string().trim().min(3).max(29).optional(),
+            timezone: z.string().trim().min(1).max(100).optional(),
+        }).strict().optional(),
+        reminders: z.object({
+            attendanceReminder: z.boolean().optional(),
+            examReminder: z.boolean().optional(),
+            todoReminder: z.boolean().optional(),
+            assignmentReminder: z.boolean().optional(),
+            weeklySummary: z.boolean().optional(),
+        }).strict().optional(),
+        notifications: z.object({
+            attendanceReminder: z.boolean().optional(),
+            examReminder: z.boolean().optional(),
+            todoReminder: z.boolean().optional(),
+            assignmentReminder: z.boolean().optional(),
+            weeklySummary: z.boolean().optional(),
+        }).strict().optional(),
+        password: z.object({
+            verificationfouse: z.boolean(),
+        }).strict().optional(),
+        appearance: z.object({
+            theme: z.enum(["LIGHT", "DARK"]).optional(),
+            animations: z.boolean().optional(),
+            navigation: z.enum(["def", "drg"]).optional(),
+            textSize: z.enum(["def", "sml", "big"]).optional(),
+        }).strict().optional(),
+    }).strict().refine((updates) => Object.keys(updates).length > 0, {
+        message: "At least one update is required",
     })
 
-    const result = schema.safeParse(req.query)
+    const result = schema.safeParse(req.body)
 
     if (!result.success) {
         console.log("Zod Error Details:", result.error.flatten().fieldErrors)
@@ -33,7 +52,7 @@ export const validateSettingsUpdate = (req, res, next) => {
         })
     }
 
-    req.validatedQuery = result.data
+    req.validatedBody = result.data
 
     next()
 }
@@ -52,7 +71,7 @@ export const velidateUpdatePassword = (req, res, next) => {
             
     })
 
-    const result = schema.safeParse(req.query)
+    const result = schema.safeParse(req.body)
 
     if (!result.success) {
         console.log("Zod Error Details:", result.error.flatten().fieldErrors)
@@ -64,7 +83,7 @@ export const velidateUpdatePassword = (req, res, next) => {
         })
     }
 
-    req.validatedQuery = result.data
+    req.validatedBody = result.data
 
     next()
 }

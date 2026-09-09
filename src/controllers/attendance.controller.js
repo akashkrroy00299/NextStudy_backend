@@ -2,9 +2,25 @@ import { Temporal } from '@js-temporal/polyfill';
 import classModel from "../models/class.model.js"
 import classLogModel from '../models/attendanceLog.model.js';
 import subjectModel from '../models/subjetcs.model.js';
+import settingsModel from '../models/settings.model.js';
 import { plainDateToDate, formatDateDDMMYYYY } from '../utils/dateUtil.js';
 
-function getWeekdayNumber(plainDate = Temporal.Now.plainDateISO()) {
+const getUserTimezone = async (userId) => {
+    const settings = await settingsModel.findOne({ userId }).select("timezone").lean();
+    return settings?.timezone || "Asia/Kolkata";
+};
+
+// safe wrapper to handle invalid timezone strings (e.g., typo "Aisa/Kolkata")
+function safePlainDateISO(timezone) {
+    try {
+        return Temporal.Now.plainDateISO(timezone);
+    } catch (err) {
+        console.warn(`Invalid timezone "${timezone}", falling back to Asia/Kolkata`);
+        return Temporal.Now.plainDateISO('Asia/Kolkata');
+    }
+}
+
+function getWeekdayNumber(plainDate) {
     return plainDate.dayOfWeek - 1;
 }
 
@@ -15,7 +31,8 @@ function getWeekdayNumber(plainDate = Temporal.Now.plainDateISO()) {
 export const todayClasses = async (req, res) => {
     try {
         const userId = req.userId;
-        const today = Temporal.Now.plainDateISO();
+        const timezone = await getUserTimezone(userId);
+        const today = safePlainDateISO(timezone);
         const weekdayIndex = getWeekdayNumber(today);
         const todayDate = plainDateToDate(today);
 
@@ -42,10 +59,12 @@ export const updateAttend = async (req, res) => {
     try {
         const userId = req.userId;
         const { subjectId, attended } = req.body;
-        const today = Temporal.Now.plainDateISO();
+        const timezone = await getUserTimezone(userId);
+        const today = safePlainDateISO(timezone);
         const date = plainDateToDate(today);
+        const weekdayIndex = getWeekdayNumber(today);
 
-        const cls = await classModel.findOne({ userId, subjectId, isActive: true });
+        const cls = await classModel.findOne({ userId, subjectId, day: weekdayIndex, isActive: true });
         if (!cls) {
             return res.status(404).json({ success: false, message: "Class not found for this subject" });
         }
@@ -84,7 +103,8 @@ export const getMonthlyGridData = async (req, res) => {
     try {
         const userId = req.userId
         const { month, year: queryYear } = req.validatedQuery
-        const today = Temporal.Now.plainDateISO()
+        const timezone = await getUserTimezone(req.userId);
+        const today = safePlainDateISO(timezone)
         const year = queryYear ?? today.year
 
         // * FATCHING SUBJECTS
@@ -143,7 +163,7 @@ export const getMonthlyGridData = async (req, res) => {
                     status = "not-scheduled"
                 } else {
                     const log = logMap.get(`${subject.subjectId}|${dateKey}`)
-                    status = log?.isAttend ? "present" : "absent"
+                    status = log ? (log.isAttend ? "present" : "absent") : "unrecorded"
                 }
 
                 return { date: day, status }

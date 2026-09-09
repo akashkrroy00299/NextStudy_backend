@@ -12,6 +12,7 @@ import todosRouter from "./src/routers/todos.route.js";
 
 // Background Cron Jobs
 import startExpireTodosJob from "./src/jobs/startExpireTodosJob.js";
+import classNotificationJob from "./src/jobs/classNotificationJob.js"
 
 const app = express();
 
@@ -44,6 +45,7 @@ const startServer = async () => {
     });
 
     startExpireTodosJob();
+    classNotificationJob();
   } catch (error) {
     console.log("Failed to start server:", error);
     process.exit(1);

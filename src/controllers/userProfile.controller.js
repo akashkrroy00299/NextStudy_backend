@@ -9,7 +9,7 @@ import mongoose from "mongoose";
 export const fatchUser = async (req, res) => {
     try {
         const userId = req.userId
-        const user = await userModel.findById(userId)
+        const user = await userModel.findById(userId).select("-password")
 
         const settings = await settingsModel.findOne({userId: user._id})
         if(!settings){
@@ -39,7 +39,7 @@ export const updateUser = async (req, res) => {
         const settings = await settingsModel.findOne({ userId })
         if(!settings){ return res.status(404).json({ success: false, message: 'settings not found'})}
         
-        const updates = req.body
+        const updates = req.validatedBody
         if(!updates || Object.keys(updates).length === 0){
             return res.status(400).json({ success: false, message: 'no updates'});
         }
@@ -48,13 +48,19 @@ export const updateUser = async (req, res) => {
         }
 
         for(const [updateKey, updateObj] of Object.entries(updates)){
-            if(updateKey === 'profile'){
-                await userModel.findByIdAndUpdate(
-                    userId, { $set: updateObj }, { new: true }
-                )
+            if(updateKey === 'profile' || updateKey === 'account'){
+                const userUpdates = {}
+                if (updateObj.username !== undefined) userUpdates.username = updateObj.username
+                if (updateObj.timezone !== undefined) userUpdates.timezone = updateObj.timezone
+                if (Object.keys(userUpdates).length > 0) {
+                    await userModel.findByIdAndUpdate(userId, { $set: userUpdates })
+                }
+                if (updateObj.timezone !== undefined) {
+                    await settingsModel.findByIdAndUpdate(settings._id, { $set: { timezone: updateObj.timezone } })
+                }
             }
 
-            if(updateKey === 'reminders'){
+            if(updateKey === 'reminders' || updateKey === 'notifications'){
                 await settingsModel.findByIdAndUpdate(
                     settings._id, { $set: updateObj }, { new: true }
                 )
@@ -91,10 +97,13 @@ export const updateUser = async (req, res) => {
 // * UPDATE PASSWORD
 export const updatePassword = async (req, res) => {
     try {
-        const { password , newPassword } = req.password
+        const { password, newPassword } = req.validatedBody
         const userId = req.userId
         const user = await userModel.findById(userId)
-        const isValid = bcrypt.compare(user.password, password)
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" })
+        }
+        const isValid = await bcrypt.compare(password, user.password)
         if(!isValid){
             return res.status(400).json({ success: false, message: "Invalid Password" })
         }
@@ -148,6 +157,19 @@ export const sesstions = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "Server Error at sesstions get route"
+        })
+    }
+}
+
+// * UPDATE PROFILE PIC
+export const uploadeProfileImg = async (req, res) => {
+    try {
+        
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({
+            success: false,
+            message: "Error At Uploade Profile Img!"
         })
     }
 }

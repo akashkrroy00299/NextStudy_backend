@@ -30,6 +30,8 @@ const classLogSchema = new mongoose.Schema({
 
 } , { timestamps: true })
 
+classLogSchema.index({ userId: 1, subjectId: 1, date: 1 }, { unique: true });
+
 // Virtual to get formatted date as dd.mm.yyyy
 classLogSchema.virtual("dateFormatted").get(function() {
     return formatDateDDMMYYYY(this.date);

@@ -1,16 +1,18 @@
-import { success } from "zod";
 import todoModel from "../models/todos.model.js";
+import mongoose from "mongoose";
 
 // * UTILITY
 const thirtyDaysAgo = new Date()
 thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+const isValidTodoId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 
 // * FUNCTIONS
 export const createTodo = async (req, res) => {
     try {
         const userId = req.userId;
-        let { title, dueDate, priority, category } = req.body;
+        let { title, dueDate, priority, category } = req.validatedBody;
 
         if (!title) {
             return res.status(400).json({
@@ -28,7 +30,6 @@ export const createTodo = async (req, res) => {
         const todo = await todoModel.create({
             userId,
             title,
-            description,
             dueDate,
             priority,
             category
@@ -109,7 +110,7 @@ export const fatchTodo = async (req, res) => {
         const userId = req.userId;
         const { id } = req.params;
 
-        if (!id) {
+        if (!isValidTodoId(id)) {
             return res.status(400).json({ message: 'id required', success: false });
         }
 
@@ -141,9 +142,9 @@ export const updateTodo = async (req, res) => {
     try {
         const userId = req.userId;
         const { id } = req.params;
-        const { title, dueDate, priority, category } = req.body;
+        const { title, dueDate, priority, category } = req.validatedBody;
 
-        if (!id) {
+        if (!isValidTodoId(id)) {
             return res.status(400).json({ message: 'id required', success: false });
         }
 
@@ -186,7 +187,7 @@ export const deleteTodo = async (req, res) => {
     try {
         const userId = req.userId;
         const { id } = req.params;
-        if (!id) {
+        if (!isValidTodoId(id)) {
             return res.status(400).json({ message: 'id required', success: false });
         }
 
@@ -220,7 +221,7 @@ export const updateTodoStatus = async (req, res) => {
         const { id } = req.params;
         const { isCompleted } = req.body;
 
-        if (!id) {
+        if (!isValidTodoId(id)) {
             return res.status(400).json({ message: 'id required', success: false });
         }
 

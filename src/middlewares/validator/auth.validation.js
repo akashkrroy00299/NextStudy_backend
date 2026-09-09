@@ -18,6 +18,7 @@ export const registerValidation = (req, res, next) => {
             .string()
             .min(8, "passwword must be 8 charcter long")
             .max(29, "password is too long"),
+        timezone: z.string().trim().min(1).max(100).optional(),
     })
 
     const result = schema.safeParse(req.body)

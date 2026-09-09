@@ -7,7 +7,8 @@ const userSchema = new mongoose.Schema({
     username: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true },
-    timezon: { type: String, default: 'Aisa/Kolkata' },
+    timezone: { type: String, default: "Asia/Kolkata" },
+    role: { type: String, enum: ["user", "admin"], default: "user" },
     isVerified: { type: Boolean, default: false },
     verificationExpiresAt: {
         type: Date,

@@ -34,15 +34,15 @@ export const register = async (req, res) => {
             user.username = username
             user.email = normalizedEmail
             user.password = hashPassword
-            const settings = await settingsModel.findOne({ userId: user._id })
+            let settings = await settingsModel.findOne({ userId: user._id })
             if (!settings) {
                 settings = await settingsModel.create({ userId: user._id, timezone })
                 user.settingId = settings._id
             }
             await user.save()
         } else {
-            user = await userModel.create({ username, email: normalizedEmail, password: hashPassword, timezon: timezone })
-            await settingsModel.create({ userId: user._id, timezone })
+            user = await userModel.create({ username, email: normalizedEmail, password: hashPassword, timezone })
+            const settings = await settingsModel.create({ userId: user._id, timezone })
             user.settingId = settings._id
             await user.save()
         }
@@ -94,6 +94,7 @@ export const verifyOtp = async (req, res) => {
 
         const otpFile = await otpModel.findOne({ email: normalizedEmail })
         if (!otpFile) { return res.status(400).json({ success: false, message: "Otp not found" }) }
+        if (otpFile.purpose !== "register") { return res.status(400).json({ success: false, message: "Invalid OTP request" }) }
 
         if (otpFile.attempts >= 10) {
             await otpModel.deleteOne({ _id: otpFile._id })
@@ -525,7 +526,7 @@ export const verifyPasswordReset = async (req, res) => {
 
         const otpFile = await otpModel.findOne({ email: normalizedEmail })
         if (!otpFile) { return res.status(400).json({ success: false, message: "Otp not found" }) }
-        if (otpFile.purpose !== "register") { return res.status(400).json({ success: false, message: "Invalid OTP request" }) }
+        if (otpFile.purpose !== "reset-password") { return res.status(400).json({ success: false, message: "Invalid OTP request" }) }
 
         if (otpFile.attempts >= 10) {
             await otpModel.deleteOne({ _id: otpFile._id })
@@ -581,11 +582,22 @@ export const resetPassword = async (req, res) => {
         const resetToken = req.cookies.resetToken
         if (!resetToken) { return res.status(400).json({ success: false, message: "reset token not found" }) }
 
-        const decoded = jwt.verify(resetToken, config.RESET_PASSWORD_TOKEN_SECRET)
+        let decoded
+        try {
+            decoded = jwt.verify(resetToken, config.RESET_PASSWORD_TOKEN_SECRET)
+        } catch (error) {
+            if (error.name === "TokenExpiredError" || error.name === "JsonWebTokenError") {
+                return res.status(401).json({ success: false, message: "Invalid or expired reset token" })
+            }
+            throw error
+        }
         const userId = decoded.userId
 
         const hashedPassword = await bcrypt.hash(newPassword, 10)
-        await userModel.findByIdAndUpdate(userId, { password: hashedPassword })
+        const user = await userModel.findByIdAndUpdate(userId, { password: hashedPassword })
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" })
+        }
 
         res.clearCookie("resetToken", {
             httpOnly: true,

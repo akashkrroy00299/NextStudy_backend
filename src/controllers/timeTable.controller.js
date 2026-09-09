@@ -168,10 +168,7 @@ export const getSubjects = async (req, res) => {
       const userId = req.userId
       let subjectsData = await subjectModel.findOne({ userId, isActive: true })
       if (!subjectsData){
-         const id = uuidv4()
-         const subjects = [
-            { title: "Math", subjectId: id, dayOfWeek: [0] }
-         ]
+         const subjects = []
          subjectsData = await subjectModel.create({
             userId,
             isActive: true,
