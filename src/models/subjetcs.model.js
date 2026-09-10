@@ -34,7 +34,8 @@ const subjectSchema = new mongoose.Schema({
             subjectId: { type: String, required: true },
             dayOfWeek: [
                 { type: Number , min: 0, max: 6 }
-            ]
+            ],
+            terget: { type: Number, default: 75 }
         }
     ]
 });

@@ -10,7 +10,7 @@ const settingsSchema = new mongoose.Schema(
     },
 
     //* APPEARANCE
-    theme: { type: String, default: "LIGHT", enum: ["LIGHT", "DARK"] },
+    theme: { type: String, default: "DARK", enum: ["LIGHT", "DARK"] },
     animations: { type: Boolean, default: true },
     navigation: { type: String, enum: ["def", "drg"], default: "def" },
     textSize: { type: String, enum: ["def", "sml", "big"], default: "def" },

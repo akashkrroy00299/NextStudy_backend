@@ -9,6 +9,7 @@ import authRouter from "./src/routers/auth.route.js";
 import userRouter from "./src/routers/userProfile.route.js";
 import attendanceRouter from "./src/routers/attendance.route.js";
 import todosRouter from "./src/routers/todos.route.js";
+import notificationRouter from "./src/routers/notification.route.js"
 
 // Background Cron Jobs
 import startExpireTodosJob from "./src/jobs/startExpireTodosJob.js";
@@ -29,6 +30,7 @@ app.use("/api/auth", authRouter);
 
 // user
 app.use("/api/user", userRouter);
+app.use("/api/notification", notificationRouter);
 
 // Activites
 app.use("/api/activites/attendance", attendanceRouter);

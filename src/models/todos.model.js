@@ -17,7 +17,7 @@ const schema = new mongoose.Schema({
 }, { timestamps: true });
 
 schema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
-schema.index({ isCompleted: 1, isExpaired: 1, dueDate: 1 });
+schema.index({ isCompleted: 1, isExpaired: 1, dueDate: 1, userId: 1 });
 
 const todoModel = mongoose.model('todos', schema);
 export default todoModel;

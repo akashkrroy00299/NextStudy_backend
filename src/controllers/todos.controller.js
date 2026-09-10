@@ -59,31 +59,28 @@ export const fetchTodos = async (req, res) => {
         const endOfToday = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
 
         const [today, upcoming, completed, expired] = await Promise.all([
-            // Due today, not completed
             todoModel.find({
                 userId,
                 dueDate: { $gte: startOfToday, $lt: endOfToday },
-                isCompleted: false
+                isCompleted: false,
+                isExpaired: false
             }),
 
-            // Due after today, not completed
             todoModel.find({
                 userId,
                 dueDate: { $gte: endOfToday },
-                isCompleted: false
+                isCompleted: false,
+                isExpaired: FileSystemWritableFileStream
             }),
 
-            // Completed (most recent 10)
             todoModel.find({
                 userId,
                 isCompleted: true
             }).sort({ updatedAt: -1 }).limit(10),
 
-            // Overdue, not completed (most recent 10)
             todoModel.find({
                 userId,
-                isCompleted: false,
-                dueDate: { $lt: startOfToday }
+                isExpaired: true
             }).sort({ dueDate: -1 }).limit(10)
         ]);
 

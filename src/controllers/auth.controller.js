@@ -9,6 +9,7 @@ import otpModel from "../models/otp.model.js";
 import sendOtpMail from "../utils/sendMail.js"
 import settingsModel from "../models/settings.model.js";
 import sessionModel from "../models/session.model.js";
+import notificationModel from "../models/notification.model.js"
 import { generateAccessToken, generateRefreshToken, generateResetPasswordToken } from "../utils/grnrateTokens.js";
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from "../utils/dateUtil.js";
 import { getLocationFromRequest } from "../lib/getLocationFromRequest.js";
@@ -140,6 +141,17 @@ export const verifyOtp = async (req, res) => {
             browser: result.browser?.name || "Unknown",
             os: result.os?.name || "Unknown",
             diviceId
+        })
+
+        const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: user.timezone || 'Asia/Kolkata' })
+        const notificationKey = `user_${user._id}_${todayKey}`
+        await notificationModel.create({
+            userId: user._id,
+            type: 'user',
+            title: "Welcome to NexStudy",
+            message: `Hey ${user.username || "there"}, welcome aboard! Your account is all set — start by adding your subjects and setting up your timetable.`,
+            status: "sent",
+            notificationKey
         })
 
         res.cookie("diviceId_nextStudy", diviceId, {
@@ -451,6 +463,18 @@ export const login = async (req, res) => {
             os: result.os?.name || "Unknown",
             diviceId
         })
+
+        const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: user.timezone || 'Asia/Kolkata' })
+        const notificationKey = `user_${user._id}_${todayKey}`
+        await notificationModel.create({
+            userId: user._id,
+            type: 'user',
+            title: "New Login Detected",
+            message: `A new login to your account was recorded on ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}. If this wasn't you, please secure your account immediately.`,
+            status: "sent",
+            notificationKey
+        })
+
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
             secure: config.NODE_ENV === "production",
@@ -615,6 +639,17 @@ export const resetPassword = async (req, res) => {
             { userId: decoded.userId, revoked: false },
             { $set: { revoked: true } }
         );
+
+        const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: user.timezone || 'Asia/Kolkata' })
+        const notificationKey = `user_${user._id}_${todayKey}`
+        await notificationModel.create({
+            userId: user._id,
+            type: 'user',
+            title: "Password Changed",
+            message: `Your password was successfully reset on ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}. If you didn't request this change, contact support right away.`,
+            status: 'sent',
+            notificationKey
+        });
 
         return res.status(200).json({
             success: true,

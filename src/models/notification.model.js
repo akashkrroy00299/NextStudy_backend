@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const notificationSchema = new mongoose.Schema({
+const schema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
@@ -42,5 +42,10 @@ const notificationSchema = new mongoose.Schema({
 
 }, { timestamps: true })
 
-const notificationModel = mongoose.model("Notification", notificationSchema)
+schema.index(
+    { createdAt: 1 },
+    { expireAfterSeconds: 60 * 60 * 24 * 7 }
+)
+
+const notificationModel = mongoose.model("Notification", schema)
 export default notificationModel

@@ -16,12 +16,16 @@ const expireOverdueTodos = async () => {
     try {
         let totalExpired = 0;
         for (let i = 0; i < MAX_BATCHES_PER_RUN; i++) {
+
+            const startOfToday = new Date();
+            startOfToday.setHours(0, 0, 0, 0);
+
             const overdueBatch = await todoModel
                 .find(
                     {
                         isCompleted: false,
                         isExpaired: false,
-                        dueDate: { $lt: new Date() }
+                        dueDate: { $lt: startOfToday }
                     },
                     { _id: 1 }
                 )
