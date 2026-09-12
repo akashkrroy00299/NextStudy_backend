@@ -144,7 +144,7 @@ export const verifyOtp = async (req, res) => {
         })
 
         const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: user.timezone || 'Asia/Kolkata' })
-        const notificationKey = `user_${user._id}_${todayKey}`
+        const notificationKey = `user_${user._id}_${crypto.randomUUID()}`
         await notificationModel.create({
             userId: user._id,
             type: 'user',
@@ -465,7 +465,7 @@ export const login = async (req, res) => {
         })
 
         const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: user.timezone || 'Asia/Kolkata' })
-        const notificationKey = `user_${user._id}_${todayKey}`
+        const notificationKey = `user_${user._id}_${crypto.randomUUID()}`
         await notificationModel.create({
             userId: user._id,
             type: 'user',
@@ -641,7 +641,7 @@ export const resetPassword = async (req, res) => {
         );
 
         const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: user.timezone || 'Asia/Kolkata' })
-        const notificationKey = `user_${user._id}_${todayKey}`
+        const notificationKey = `user_${user._id}_${crypto.randomUUID()}`
         await notificationModel.create({
             userId: user._id,
             type: 'user',

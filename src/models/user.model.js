@@ -27,6 +27,9 @@ const userSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Settings",
     },
+    activeTimetableId: {
+        type: String
+    },
 
     // * TODOS STACK
     TodoStreak: {

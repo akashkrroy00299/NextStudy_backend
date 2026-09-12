@@ -5,6 +5,7 @@ import userModel from "../models/user.model.js";
 import sessionModel from "../models/session.model.js";
 import notificationModel from "../models/notification.model.js"
 import mongoose from "mongoose";
+import timetableModel from "../models/timetable.model.js";
 
 
 // * FATCH USER
@@ -211,6 +212,25 @@ export const sesstions = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Server Error at sesstions get route"
+    })
+  }
+}
+
+// * FATCH ALL TIMETABLES
+export const timetables = async (req, res) => {
+  try {
+    const userId = req.userId
+    const timeTables = await timetableModel.find({ userId, isActive: true })
+
+    return res.status(200).json({
+      success: true,
+      timeTables
+    })
+  } catch (error) {
+    console.log(error)
+    return res.status(500).json({
+      success: false,
+      message: "Server Error at timetables get route",
     })
   }
 }

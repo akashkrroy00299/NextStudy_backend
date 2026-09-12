@@ -6,7 +6,7 @@ import config from "../config/config.js";
 
 const connectDB = async () => {
     try {
-        await mongoose.connect(config.MONGO_URL)
+        const connection = await mongoose.connect(config.MONGO_URL)
         console.log("mongoDB connected")
     } catch (error) {
         console.log("Error at ConnectDB", error)

@@ -70,7 +70,7 @@ export const fetchTodos = async (req, res) => {
                 userId,
                 dueDate: { $gte: endOfToday },
                 isCompleted: false,
-                isExpaired: FileSystemWritableFileStream
+                isExpaired: false
             }),
 
             todoModel.find({
