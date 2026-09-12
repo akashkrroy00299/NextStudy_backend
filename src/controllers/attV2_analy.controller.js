@@ -12,11 +12,6 @@ function getWeekdayNumber(plainDate) {
   return plainDate.dayOfWeek - 1;
 }
 
-const getUserTimezone = async (userId) => {
-  const settings = await settingsModel.findOne({ userId }).select("timezone").lean();
-  return settings?.timezone || "Asia/Kolkata";
-};
-
 function safePlainDateISO(timezone) {
   try {
     return Temporal.Now.plainDateISO(timezone);
@@ -103,12 +98,9 @@ export const toggleAttended = async (req, res) => {
       return res.status(404).json({ success: false, message: "Class not found" })
     }
 
-    const now = new Date()
-    const startOfDay = new Date(now)
-    startOfDay.setHours(0, 0, 0, 0)
-
-    const endOfDay = new Date(now)
-    endOfDay.setHours(23, 59, 59, 999)
+    const today = safePlainDateISO(user.timezone)
+    const startOfDay = plainDateToDate(today)
+    const endOfDay = plainDateToDate(today.add({ days: 1 }))
 
     let attendanceLog = await attendanceLogModel.findOne({
       userId,
@@ -134,7 +126,7 @@ export const toggleAttended = async (req, res) => {
       classId: clsId,
       subjectId: classDoc.subjectId,
       isAttend: isAttend,
-      date: now
+      date: startOfDay
     })
 
     return res.status(201).json({
@@ -242,9 +234,13 @@ export const tagerAttendance = async (req, res) => {
 
       if (totalHeld > 0) {
         if (currentPercent >= target) {
-          canBunk = Math.max(Math.floor((present * 100 - target * totalHeld) / target), 0)
+          canBunk = target > 0
+            ? Math.max(Math.floor((present * 100 - target * totalHeld) / target), 0)
+            : present
         } else {
-          mustAttend = Math.max(Math.ceil((target * totalHeld - 100 * present) / (100 - target)), 0)
+          mustAttend = target < 100
+            ? Math.max(Math.ceil((target * totalHeld - 100 * present) / (100 - target)), 0)
+            : Infinity
         }
       }
 
@@ -280,7 +276,7 @@ export const gridDataDisplayInMonth = async (req, res) => {
     const userId = req.userId
     const id = req.params.id
     const currentDate = new Date()
-    const { month, year = currentDate.getFullYear() } = req.query
+    const { month, year = currentDate.getFullYear() } = req.validatedQuery
 
     const user = await userModel.findById(userId)
     if (!user) { return res.status(400).json({ success: false, message: "User not found!" }) }

@@ -5,9 +5,11 @@ const schema = new mongoose.Schema({
     timeTableId: { type: mongoose.Schema.Types.ObjectId, ref: "Timetable", required: true },
     subjectId: { type: String, required: true },
     name: { type: String, required: true },
-    startTime: { type: Date, required: true },
+
+    startTime: { type: String, required: true },
     endTime: { type: String, required: true },
-    day: { type: String, required: true },
+    day: { type: Number, min: 0, max: 6, required: true },
+    
     color: { type: String, required: true },
     notify: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true }

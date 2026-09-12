@@ -3,6 +3,9 @@ import { z } from 'zod'
 
 
 const day_enum = z.number().int().min(0).max(6)
+const time_regex = /^([01]\d|2[0-3]):([0-5]\d)$/
+const time_field = z.string().regex(time_regex, "Time must be in HH:mm 24-hour format")
+
 const subject_create_schema = z.object({
     name: z.string().min(1).max(199),
     color: z.string(),
@@ -63,31 +66,47 @@ const object_id_schema = z.string().refine(
 const class_fields_schema = z.object({
     day: day_enum,
     subjectId: z.string().uuid(),
-    startTime: z.string().optional(),
-    endTime: z.string().optional(),
+    startTime: time_field.optional(),
+    endTime: time_field.optional(),
     name: z.string().min(2).max(199).optional(),
+    color: z.string().optional(),
 })
 
-const add_cls_schema = class_fields_schema
+const add_cls_op = class_fields_schema.extend({
+    type: z.literal('add_cls'),
+    startTime: time_field,
+    endTime: time_field,
+    color: z.string(),
+}).refine(
+    (data) => data.startTime < data.endTime,
+    { message: "startTime must be before endTime", path: ["endTime"] }
+)
 
-const delete_cls_schema = z.object({
+const delete_cls_op = z.object({
+    type: z.literal('delete_cls'),
     id: object_id_schema
 })
 
-const update_cls_schema = z.object({
+const update_cls_op = z.object({
+    type: z.literal('update_cls'),
     id: object_id_schema,
     update: class_fields_schema.partial()
 })
 
+const classes_update_op = z.discriminatedUnion('type', [
+    add_cls_op,
+    delete_cls_op,
+    update_cls_op
+])
+
 export const update_classes_schema = z.object({
-    updates: z.object({
-        add_cls: add_cls_schema.optional(),
-        delete_cls: delete_cls_schema.optional(),
-        update_cls: update_cls_schema.optional(),
-    }).refine(
-        (data) => Object.keys(data).length > 0,
-        { message: "At least one update operation is required" }
-    )
+    updates: z.array(classes_update_op).min(1)
+})
+
+export const copy_timetable_schema = z.object({
+    name: z.string().min(2).max(199).optional(),
+    startDate: z.date(),
+    endDate: z.date().optional(),
 })
 
 export const validator = (schema) => (req, res, next) => {

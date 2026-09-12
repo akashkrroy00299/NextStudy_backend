@@ -105,7 +105,7 @@ export const updateTimetable = async (req, res) => {
     const id = req.params.id
 
     const { updates } = req.body
-    if (!updates || !Object.keys(updates).length) { return res.status(400).json({ success: false, message: ERRORS.updateteTimetable }) }
+    if (!updates || !updates.length) { return res.status(400).json({ success: false, message: ERRORS.updateteTimetable }) }
 
     const timetable = await timetableModel.findOne({ _id: id, userId })
     if (!timetable) { return res.status(400).json({ success: false, message: ERRORS.timeTable }) }
@@ -113,30 +113,30 @@ export const updateTimetable = async (req, res) => {
     let _subjects = [...timetable.subjects]
     let isMezor = false
 
-    for (const [key, value] of Object.entries(updates)) {
-      if (key === 'update_timetable') {
-        const { name, startDate, endDate } = value
+    for (const op of updates) {
+      if (op.type === 'update_timetable') {
+        const { name, startDate, endDate } = op
         if (name) { _updates.name = name }
         if (startDate) { _updates.startDate = startDate }
         if (endDate) { _updates.endDate = endDate }
       }
 
-      if (key === 'add_subject') {
-        const { name, target, color } = value
+      if (op.type === 'add_subject') {
+        const { name, target, color } = op
         const subjectId = crypto.randomUUID()
         const subject = { name: name, color: color, target: target, subjectId: subjectId }
         _subjects.push(subject)
         isMezor = true
       }
 
-      if (key === 'remove_subject') {
-        const id = value
-        _subjects = _subjects.filter((prev) => prev.subjectId !== id)
+      if (op.type === 'remove_subject') {
+        const { subjectId } = op
+        _subjects = _subjects.filter((prev) => prev.subjectId !== subjectId)
         isMezor = true
       }
 
-      if (key === 'update_subject') {
-        const { id, update } = value
+      if (op.type === 'update_subject') {
+        const { id, update } = op
         _subjects = _subjects.map((prev) => prev.subjectId === id ? { ...prev, ...update } : prev)
         isMezor = true
       }
@@ -209,7 +209,7 @@ export const updateClasses = async (req, res) => {
     const id = req.params.id
 
     const { updates } = req.body
-    if (!updates || !Object.keys(updates).length) { return res.status(400).json({ success: false, message: ERRORS.updateteTimetable }) }
+    if (!updates || !updates.length) { return res.status(400).json({ success: false, message: ERRORS.updateteTimetable }) }
 
     const timetable = await timetableModel.findOne({ _id: id, userId })
     if (!timetable) { return res.status(400).json({ success: false, message: ERRORS.timeTable }) }
@@ -221,19 +221,19 @@ export const updateClasses = async (req, res) => {
     const pendingDeletes = []
     const pendingUpdates = []
 
-    for (const [key, value] of Object.entries(updates)) {
-      if (key === 'add_cls') {
-        const { day, subjectId } = value
+    for (const op of updates) {
+      if (op.type === 'add_cls') {
+        const { day, subjectId, startTime, endTime, name, color } = op
         const subject = _subjects.find((prev) => prev.subjectId === subjectId)
         if (!subject) { continue }
 
-        pendingCreates.push({ ...value, timeTableId: timetable._id, userId })
+        pendingCreates.push({ day, subjectId, startTime, endTime, name, color, timeTableId: timetable._id, userId })
         subject.classes.push(day)
         subjectsChanged = true
       }
 
-      if (key === 'delete_cls') {
-        const { id: classId } = value
+      if (op.type === 'delete_cls') {
+        const { id: classId } = op
         const existingCls = await classModel.findOne({ _id: classId, userId, timeTableId: timetable._id })
         if (!existingCls) { continue }
 
@@ -249,8 +249,8 @@ export const updateClasses = async (req, res) => {
         }
       }
 
-      if (key === 'update_cls') {
-        const { id: classId, update } = value
+      if (op.type === 'update_cls') {
+        const { id: classId, update } = op
         const { day } = update
 
         const existingCls = await classModel.findOne({ _id: classId, userId, timeTableId: timetable._id })
@@ -348,6 +348,8 @@ export const slugToCopyTimeTable = async (req, res) => {
     const { startDate, endDate, name } = req.body;
     let _name
 
+    const user = await userModel.findById(userId)
+    if (!user) { return res.status(400).json({ success: false, message: ERRORS.userNotFound }) }
     // 1. Find the original timetable
     const timetable = await timetableModel.findOne({
       slug,
@@ -395,7 +397,7 @@ export const slugToCopyTimeTable = async (req, res) => {
     // 4. Generate new timetable information
     const uuid = crypto.randomUUID();
     const verson = 1;
-    const _slug = `${timetable.userId}_${uuid}_${verson}`;
+    const _slug = `${user.username}_${uuid}_${verson}`;
 
     // 5. Create copied timetable
     const data = {
