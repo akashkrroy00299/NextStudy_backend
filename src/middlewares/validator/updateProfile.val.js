@@ -32,6 +32,10 @@ export const validateSettingsUpdate = (req, res, next) => {
         }).strict().optional(),
         appearance: z.object({
             theme: z.enum(["LIGHT", "DARK"]).optional(),
+            accent: z.object({
+                name: z.enum(["royal-blue", "forest-green", "crimson-red"]),
+                color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+            }).strict().optional(),
             animations: z.boolean().optional(),
             navigation: z.enum(["def", "drg"]).optional(),
             textSize: z.enum(["def", "sml", "big"]).optional(),

@@ -18,10 +18,15 @@ export const verifyUser = (req, res, next) => {
         next();
 
     } catch (error) {
-        console.log(error);
+        if (error.name !== "TokenExpiredError") {
+            console.log(error);
+        }
+
         return res.status(401).json({
-            message: "Error at Verify Access Token",
-            success: false
+            success: false,
+            message: error.name === "TokenExpiredError"
+                ? "Access token expired"
+                : "Invalid access token"
         });
     }
 };

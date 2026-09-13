@@ -7,7 +7,7 @@ import attendanceLogModel from "../models/attendanceLog.model.js"
 import userModel from "../models/user.model.js"
 
 const ERRORS = {
-  subjectLength: "Atlist Timetable need one subject",
+  subjectLength: "At least one subject is required for a Timetable",
   userNotFound: "User not found!",
   timeTable: "Time table not found!, that can case if id is invalid",
   updateteTimetable: "Timetable update need atlist one update"
@@ -23,9 +23,9 @@ export const createTimeTable = async (req, res) => {
     if (!user) { return res.status(400).json({ success: false, message: ERRORS.userNotFound }) }
     if (!subjects || subjects.length == 0) { return res.status(400).json({ success: false, message: ERRORS.subjectLength }) }
 
-    const verson = 1
+    const version = 1
     const uuid = crypto.randomUUID()
-    const slug = `${user.username}_${uuid}_${verson}`
+    const slug = `${user.username}_${uuid}_${version}`
 
     const timeTableNameExits = await timetableModel.findOne({ userId, isActive: true, name })
     if (timeTableNameExits) {
@@ -41,7 +41,7 @@ export const createTimeTable = async (req, res) => {
       uuid,
       slug,
       name,
-      verson,
+      version,
       startDate,
       subjects
     }
@@ -49,6 +49,9 @@ export const createTimeTable = async (req, res) => {
     if (endDate) { data.endDate = endDate }
 
     const timetable = await timetableModel.create(data)
+    user.activeTimetableId = timetable._id
+
+    user.save({ validateBeforeSave: false })
 
     return res.status(201).json({
       success: true,
@@ -65,7 +68,7 @@ export const createTimeTable = async (req, res) => {
   }
 }
 
-export const fatchTimetable = async (req, res) => {
+export const fetchTimetable = async (req, res) => {
   try {
     const userId = req.userId
     const id = req.params.id
@@ -103,6 +106,7 @@ export const updateTimetable = async (req, res) => {
   try {
     const userId = req.userId
     const id = req.params.id
+    let newTimeTable = null
 
     const { updates } = req.body
     if (!updates || !updates.length) { return res.status(400).json({ success: false, message: ERRORS.updateteTimetable }) }
@@ -124,7 +128,12 @@ export const updateTimetable = async (req, res) => {
       if (op.type === 'add_subject') {
         const { name, target, color } = op
         const subjectId = crypto.randomUUID()
-        const subject = { name: name, color: color, target: target, subjectId: subjectId }
+        const subject = {
+          name,
+          color,
+          target,
+          subjectId
+        }
         _subjects.push(subject)
         isMezor = true
       }
@@ -137,7 +146,12 @@ export const updateTimetable = async (req, res) => {
 
       if (op.type === 'update_subject') {
         const { id, update } = op
-        _subjects = _subjects.map((prev) => prev.subjectId === id ? { ...prev, ...update } : prev)
+        _subjects = _subjects.map((prev) => prev.subjectId === id
+          ? {
+              ...prev,
+              ...update,
+            }
+          : prev)
         isMezor = true
       }
     }
@@ -150,15 +164,15 @@ export const updateTimetable = async (req, res) => {
       const user = await userModel.findById(userId)
       if (!user) { return res.status(400).json({ success: false, message: ERRORS.userNotFound }) }
       const uuid = timetable.uuid
-      const verson = timetable.verson + 1
-      const slug = `${user.username}_${uuid}_${verson}`
+      const version = timetable.version + 1
+      const slug = `${user.username}_${uuid}_${version}`
 
       const data = {
         userId,
         uuid,
         slug,
         name: _updates.name || timetable.name,
-        verson,
+        version,
         startDate: _updates.startDate || timetable.startDate,
         subjects: _subjects
       }
@@ -176,8 +190,9 @@ export const updateTimetable = async (req, res) => {
         await session.withTransaction(async () => {
           timetable.isActive = false
           timetable.deactivatedAt = new Date()
-          const [newTimeTable] = await timetableModel.create([data], { session })
+          const [created] = await timetableModel.create([data], { session })
           await timetable.save({ session, validateBeforeSave: false })
+          newTimeTable = created
           await classModel.updateMany(
             { timeTableId: timetable._id, userId },
             { $set: { timeTableId: newTimeTable._id } },
@@ -191,7 +206,8 @@ export const updateTimetable = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Timetable Updated!"
+      message: "Timetable Updated!",
+      timetable: newTimeTable || await timetableModel.findById(id)
     })
 
   } catch (error) {
@@ -294,15 +310,15 @@ export const updateClasses = async (req, res) => {
           if (!user) { throw new Error(ERRORS.userNotFound) }
 
           const uuid = timetable.uuid
-          const verson = timetable.verson + 1
-          const slug = `${user.username}_${uuid}_${verson}`
+          const version = timetable.version + 1
+          const slug = `${user.username}_${uuid}_${version}`
 
           const data = {
             userId,
             uuid,
             slug,
             name: timetable.name,
-            verson,
+            version,
             startDate: timetable.startDate,
             subjects: _subjects
           }
@@ -396,8 +412,8 @@ export const slugToCopyTimeTable = async (req, res) => {
 
     // 4. Generate new timetable information
     const uuid = crypto.randomUUID();
-    const verson = 1;
-    const _slug = `${user.username}_${uuid}_${verson}`;
+    const version = 1;
+    const _slug = `${user.username}_${uuid}_${version}`;
 
     // 5. Create copied timetable
     const data = {
@@ -405,7 +421,7 @@ export const slugToCopyTimeTable = async (req, res) => {
       uuid,
       slug: _slug,
       name: _name,
-      verson,
+      version,
       startDate,
       subjects: _subjects,
     };
@@ -415,6 +431,8 @@ export const slugToCopyTimeTable = async (req, res) => {
     }
 
     const new_copy_timetable = await timetableModel.create(data);
+    user.activeTimetableId = new_copy_timetable._id
+    user.save({ validateBeforeSave: false })
 
     // 6. Get all classes from original timetable
     const classes = await classModel.find({
@@ -452,3 +470,55 @@ export const slugToCopyTimeTable = async (req, res) => {
     });
   }
 };
+
+export const deleteTimetable = async (req, res) => {
+  try {
+    const userId = req.userId
+    const id = req.params.id
+
+    const timetable = await timetableModel.findOne({ _id: id, userId })
+    if (!timetable) {
+      return res.status(400).json({ success: false, message: ERRORS.timeTable })
+    }
+
+    const versions = await timetableModel.find({ userId, uuid: timetable.uuid }).select("_id subjects")
+    const timetableIds = versions.map((item) => item._id)
+    const subjectIds = [...new Set(versions.flatMap((item) => (item.subjects || []).map((subject) => subject.subjectId)))]
+    const classDocs = await classModel.find({ userId, timeTableId: { $in: timetableIds } }).select("_id")
+    const classIds = classDocs.map((item) => item._id)
+
+    const session = await mongoose.startSession()
+    try {
+      await session.withTransaction(async () => {
+        if (classIds.length) {
+          await attendanceLogModel.deleteMany({ userId, classId: { $in: classIds } }, { session })
+        }
+        if (subjectIds.length) {
+          await attendanceLogModel.deleteMany({ userId, subjectId: { $in: subjectIds } }, { session })
+        }
+        await classModel.deleteMany({ userId, timeTableId: { $in: timetableIds } }, { session })
+        await timetableModel.deleteMany({ userId, uuid: timetable.uuid }, { session })
+
+        const user = await userModel.findById(userId).session(session)
+        if (user && timetableIds.some((timetableId) => String(user.activeTimetableId) === String(timetableId))) {
+          const remaining = await timetableModel.findOne({ userId, isActive: true }).session(session)
+          user.activeTimetableId = remaining?._id || null
+          await user.save({ session, validateBeforeSave: false })
+        }
+      })
+    } finally {
+      session.endSession()
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Timetable deleted",
+    })
+  } catch (error) {
+    console.log(error.message)
+    return res.status(500).json({
+      success: false,
+      message: "Error at Delete TimeTable Route",
+    })
+  }
+}

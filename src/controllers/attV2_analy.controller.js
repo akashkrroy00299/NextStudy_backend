@@ -5,6 +5,7 @@ import attendanceLogModel from '../models/attendanceLog.model.js';
 import settingsModel from '../models/settings.model.js';
 import userModel from '../models/user.model.js';
 import { plainDateToDate } from "../utils/dateUtil.js";
+import { redisClient } from "../lib/redis.js";
 
 
 // * GLOABLE FUNCTIONS
@@ -104,6 +105,7 @@ export const toggleAttended = async (req, res) => {
 
     let attendanceLog = await attendanceLogModel.findOne({
       userId,
+      classId: clsId,
       subjectId: classDoc.subjectId,
       date: { $gte: startOfDay, $lte: endOfDay }
     })
@@ -129,6 +131,13 @@ export const toggleAttended = async (req, res) => {
       date: startOfDay
     })
 
+    const markedDate = new Date(date)
+    const monthIndex = markedDate.getMonth()
+    const year = markedDate.getFullYear()
+
+    await redisClient.del(`grid_data_${userId}_${ttId}_${monthIndex}_${year}`)
+    await redisClient.del(`target_${userId}_${ttId}`)
+
     return res.status(201).json({
       success: true,
       message: "Attendance marked",
@@ -142,10 +151,19 @@ export const toggleAttended = async (req, res) => {
 }
 
 // * SECTION 3 : TARGET AND REAL
-export const tagerAttendance = async (req, res) => {
+export const targetAttendance = async (req, res) => {
   try {
     const userId = req.userId
     const id = req.params.id
+
+    const API_NAME = "target"
+    const REDIS_KEY = `${API_NAME}_${userId}_${id}`
+
+    const data = await redisClient.get(REDIS_KEY)
+    if (data) {
+      const result = JSON.parse(data)
+      return res.status(200).json({ success: true, message: "fatch from redis", result })
+    }
 
     const user = await userModel.findById(userId)
     if (!user) {
@@ -169,7 +187,7 @@ export const tagerAttendance = async (req, res) => {
       : today
 
     const lastCounted = Temporal.PlainDate.compare(endPlain, today) < 0 ? endPlain : today
-    const allVersions = await timetableModel.find({ uuid: timetable.uuid, userId }).sort({ verson: 1 }).lean()
+    const allVersions = await timetableModel.find({ uuid: timetable.uuid, userId }).sort({ version: 1 }).lean()
 
     const totalHeldBySubject = new Map()
 
@@ -227,20 +245,21 @@ export const tagerAttendance = async (req, res) => {
       const unrecorded = totalHeld - (present + absent)
 
       const currentPercent = totalHeld > 0 ? (present / totalHeld) * 100 : 0
-      const target = sub.target ?? 75
+      const target = String(sub.target ?? "75")
+      const targetValue = Number(target)
 
       let canBunk = 0
       let mustAttend = 0
 
       if (totalHeld > 0) {
-        if (currentPercent >= target) {
-          canBunk = target > 0
-            ? Math.max(Math.floor((present * 100 - target * totalHeld) / target), 0)
+        if (currentPercent >= targetValue) {
+          canBunk = targetValue > 0
+            ? Math.max(Math.floor((present * 100 - targetValue * totalHeld) / targetValue), 0)
             : present
+        } else if (targetValue >= 100) {
+          mustAttend = Infinity
         } else {
-          mustAttend = target < 100
-            ? Math.max(Math.ceil((target * totalHeld - 100 * present) / (100 - target)), 0)
-            : Infinity
+          mustAttend = Math.max(Math.ceil((targetValue * totalHeld - 100 * present) / (100 - targetValue)), 0)
         }
       }
 
@@ -257,6 +276,9 @@ export const tagerAttendance = async (req, res) => {
         mustAttend
       }
     })
+
+    const jsonString = JSON.stringify(result)
+    await redisClient.set(REDIS_KEY, jsonString, { EX: 86400 })
 
     return res.status(200).json({
       success: true,
@@ -278,6 +300,16 @@ export const gridDataDisplayInMonth = async (req, res) => {
     const currentDate = new Date()
     const { month, year = currentDate.getFullYear() } = req.validatedQuery
 
+    const API_NAME = "grid_data"
+    const GRID_TIME = `${month}_${year}`
+    const REDIS_KEY = `${API_NAME}_${userId}_${id}_${GRID_TIME}`
+
+    const data = await redisClient.get(REDIS_KEY)
+    if (data) {
+      const result = JSON.parse(data)
+      return res.status(200).json({ success: true, ...result })
+    }
+
     const user = await userModel.findById(userId)
     if (!user) { return res.status(400).json({ success: false, message: "User not found!" }) }
 
@@ -290,7 +322,8 @@ export const gridDataDisplayInMonth = async (req, res) => {
     if (_subjects.length === 0) {
       return res.status(200).json({
         success: true,
-        message: "Add classes to see data here"
+        message: "Add classes to see data here",
+        userDay: today.toString()
       })
     }
 
@@ -300,6 +333,7 @@ export const gridDataDisplayInMonth = async (req, res) => {
     const monthEndPlain = monthStartPlain.with({ day: monthStartPlain.daysInMonth })
     const monthStart = plainDateToDate(monthStartPlain)
     const monthEnd = plainDateToDate(monthEndPlain)
+    const days = Array.from({ length: monthEndPlain.daysInMonth }, (_, i) => i + 1)
 
     const _subjectIds = _subjects.map((subject) => subject.subjectId)
     const logs = await attendanceLogModel.find({
@@ -314,8 +348,7 @@ export const gridDataDisplayInMonth = async (req, res) => {
       logMap.set(`${log.subjectId}|${dateKey}`, log)
     }
 
-    const isHoliday = () => false
-    const days = Array.from({ length: monthEndPlain.daysInMonth }, (_, i) => i + 1)
+    const isHoliday = (_plainDate) => false
 
     const result = _subjects.map((sub) => {
       const cells = days.map((day) => {
@@ -343,12 +376,19 @@ export const gridDataDisplayInMonth = async (req, res) => {
       }
     })
 
-    return res.status(200).json({
-      success: true,
+    const responsePayload = {
       month: monthIndex,
       year: yearValue,
+      userDay: today.toString(),
       days,
       subjects: result,
+    }
+
+    await redisClient.set(REDIS_KEY, JSON.stringify(responsePayload), { EX: 86400 })
+
+    return res.status(200).json({
+      success: true,
+      ...responsePayload
     })
 
   } catch (error) {

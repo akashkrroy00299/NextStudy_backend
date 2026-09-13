@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import connectDB from "./src/lib/connectDB.js";
+import { connectRedis } from "./src/lib/redis.js";
 import config from "./src/config/config.js";
 
 // Routers
@@ -40,7 +41,8 @@ const PORT = config.PORT || 5000;
 
 const startServer = async () => {
   try {
-    await connectDB();
+    await connectDB()
+    await connectRedis()
 
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);

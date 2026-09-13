@@ -11,6 +11,10 @@ const settingsSchema = new mongoose.Schema(
 
     //* APPEARANCE
     theme: { type: String, default: "DARK", enum: ["LIGHT", "DARK"] },
+    accent: {
+      name: { type: String, default: "royal-blue", enum: ["royal-blue", "forest-green", "crimson-red"] },
+      color: { type: String, default: "#4f6ef7", match: /^#[0-9a-fA-F]{6}$/ },
+    },
     animations: { type: Boolean, default: true },
     navigation: { type: String, enum: ["def", "drg"], default: "def" },
     textSize: { type: String, enum: ["def", "sml", "big"], default: "def" },

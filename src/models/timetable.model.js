@@ -5,7 +5,7 @@ const schema = new mongoose.Schema({
     uuid: { type: String, required: true, },
     slug: { type: String, required: true, },
     name: { type: String, required: true },
-    verson: { type: Number, required: true },
+    version: { type: Number, required: true },
 
     isActive: { type: Boolean, default: true },
     startDate: { type: Date, required: true },
@@ -20,7 +20,11 @@ const schema = new mongoose.Schema({
             classes: [             
                 { type: Number, min: 0, max: 6, required: true },
             ],
-            target: { type: Number, default: 75 },
+            target: {
+                type: String,
+                default: "75",
+                match: /^(?:100|[0-9]{1,2})$/,
+            },
         }
     ]
 }, { timestamps: true })

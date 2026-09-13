@@ -1,16 +1,17 @@
 import express from "express";
 import { 
     createTimeTable,
-    fatchTimetable,
+    fetchTimetable,
     updateTimetable,
     updateClasses,
-    slugToCopyTimeTable
+    slugToCopyTimeTable,
+    deleteTimetable
 } from "../controllers/attV2.controller.js"
 
 import {
     todayClasses,
     toggleAttended,
-    tagerAttendance,
+    targetAttendance,
     gridDataDisplayInMonth
 } from "../controllers/attV2_analy.controller.js"
 
@@ -30,9 +31,10 @@ const router = express.Router()
 
 //* SECTION 01 - TIMETABLE
 router.post("/", verifyUser, apiWriteLimiter, validator(create_timetable_schema), createTimeTable)
-router.get("/:id", verifyUser, apiReadLimiter, fatchTimetable)
+router.get("/:id", verifyUser, apiReadLimiter, fetchTimetable)
 
 router.patch("/:id", verifyUser, apiWriteLimiter, validator(update_timetable_schema), updateTimetable)
+router.delete("/:id", verifyUser, apiWriteLimiter, deleteTimetable)
 router.patch("/:id/classes", verifyUser, apiWriteLimiter, validator(update_classes_schema), updateClasses)
 
 router.post("/:slug", verifyUser, apiWriteLimiter, validator(copy_timetable_schema), slugToCopyTimeTable)
@@ -41,7 +43,7 @@ router.post("/:slug", verifyUser, apiWriteLimiter, validator(copy_timetable_sche
 
 router.get("/:id/today", verifyUser, apiReadLimiter, todayClasses)
 router.patch("/:ttId/classes/:clsId/toggle", verifyUser, apiWriteLimiter, toggleAttended)
-router.get("/:id/target", verifyUser, apiReadLimiter, tagerAttendance)
+router.get("/:id/target", verifyUser, apiReadLimiter, targetAttendance)
 router.get("/:id/grid", verifyUser, apiReadLimiter, dateValidation, gridDataDisplayInMonth)
 
 export default router

@@ -3,27 +3,31 @@ import { z } from 'zod'
 
 
 const day_enum = z.number().int().min(0).max(6)
+const target_field = z.preprocess(
+    (value) => typeof value === "number" ? String(value) : value,
+    z.string().regex(/^(?:100|[0-9]{1,2})$/, "Target must be a string between 0 and 100")
+)
 const time_regex = /^([01]\d|2[0-3]):([0-5]\d)$/
 const time_field = z.string().regex(time_regex, "Time must be in HH:mm 24-hour format")
 
 const subject_create_schema = z.object({
     name: z.string().min(1).max(199),
     color: z.string(),
-    target: z.number().optional()
+    target: target_field.optional()
 })
 
 export const create_timetable_schema = z.object({
     name: z.string().min(2).max(199),
-    startDate: z.date(),
-    endDate: z.date().optional(),
+    startDate: z.coerce.date(),
+    endDate: z.coerce.date().optional(),
     subjects: z.array(subject_create_schema).min(1)
 })
 
 const update_timetable_op = z.object({
     type: z.literal('update_timetable'),
     name: z.string().min(2).max(199).optional(),
-    startDate: z.date().optional(),
-    endDate: z.date().optional(),
+    startDate: z.coerce.date().optional(),
+    endDate: z.coerce.date().optional(),
 }).refine(
     (data) => data.name || data.startDate || data.endDate,
     { message: "At least one field (name, startDate, endDate) is required" }
@@ -33,7 +37,7 @@ const add_subject_op = z.object({
     type: z.literal('add_subject'),
     name: z.string().min(1).max(199),
     color: z.string(),
-    target: z.number().optional()
+    target: target_field.optional()
 })
 
 const remove_subject_op = z.object({
@@ -105,8 +109,8 @@ export const update_classes_schema = z.object({
 
 export const copy_timetable_schema = z.object({
     name: z.string().min(2).max(199).optional(),
-    startDate: z.date(),
-    endDate: z.date().optional(),
+    startDate: z.coerce.date(),
+    endDate: z.coerce.date().optional(),
 })
 
 export const validator = (schema) => (req, res, next) => {
