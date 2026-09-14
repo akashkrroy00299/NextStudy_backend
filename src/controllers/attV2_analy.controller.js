@@ -13,7 +13,7 @@ function getWeekdayNumber(plainDate) {
   return plainDate.dayOfWeek - 1;
 }
 
-function safePlainDateISO(timezone) {
+export function safePlainDateISO(timezone) {
   try {
     return Temporal.Now.plainDateISO(timezone);
   } catch (err) {

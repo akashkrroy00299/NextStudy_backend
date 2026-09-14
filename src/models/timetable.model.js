@@ -12,6 +12,9 @@ const schema = new mongoose.Schema({
     endDate: { type: Date, default: null },
     deactivatedAt: { type: Date, default: null },
 
+    strictMode: { type: Boolean, default: false },
+    isSunday: { type: Boolean, default: true },
+
     subjects: [
         { 
             subjectId: { type: String, required: true },
