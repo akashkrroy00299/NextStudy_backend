@@ -1,4 +1,14 @@
+const escapeHtml = (value) =>
+    String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;")
+
 const sendOtpHtml = (username, otp) => {
+    const safeUsername = escapeHtml(username)
+    const safeOtp = escapeHtml(otp)
 
    return `
     <!DOCTYPE html>
@@ -68,14 +78,14 @@ const sendOtpHtml = (username, otp) => {
 
             <div class="content">
 
-                <p>Hello <b>${username}</b>,</p>
+                <p>Hello <b>${safeUsername}</b>,</p>
 
                 <p>
-                    Thank you for registering. Use the OTP below to verify your email address.
+                    Use the OTP below to complete your request.
                 </p>
 
                 <div class="otp">
-                    ${otp}
+                    ${safeOtp}
                 </div>
 
                 <p>

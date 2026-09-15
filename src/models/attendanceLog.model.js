@@ -15,9 +15,17 @@ const schema = new mongoose.Schema(
 );
 
 schema.index(
-    { userId: 1, subjectId: 1, date: 1 },
+    { userId: 1, classId: 1, date: 1 },
     { unique: true }
 );
+
+schema.index(
+    { userId: 1, subjectId: 1, date: 1 }
+);
+
+schema.index({ userId: 1, date: 1 });
+
+schema.index({ classId: 1, date: 1 });
 
 const attendanceLogModel = mongoose.model(
     "AttendanceLog",

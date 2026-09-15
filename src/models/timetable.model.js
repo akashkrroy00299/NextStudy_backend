@@ -12,6 +12,8 @@ const schema = new mongoose.Schema({
     endDate: { type: Date, default: null },
     deactivatedAt: { type: Date, default: null },
 
+    visibility: { type: String, enum: ["public", "private"], default: "public" },
+
     strictMode: { type: Boolean, default: false },
     isSunday: { type: Boolean, default: true },
 

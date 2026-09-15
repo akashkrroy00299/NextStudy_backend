@@ -38,7 +38,7 @@ const settingsSchema = new mongoose.Schema(
       type: [{ name: String }],
       default: [{ name: "Personal" }, { name: "Work" }],
     },
-    fatchCompletedTodoLimit: { type: Number, default: 10 }
+    fetchCompletedTodoLimit: { type: Number, default: 10 }
   },
   { timestamps: true }
 );

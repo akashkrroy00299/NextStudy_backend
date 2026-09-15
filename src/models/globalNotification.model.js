@@ -8,7 +8,7 @@ const schema = new mongoose.Schema({
     readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     dismissedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }
-})
+}, { timestamps: true })
 
 schema.index({ createdAt: -1 })
 

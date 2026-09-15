@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { formatDateDDMMYYYY } from "../utils/dateUtil.js";
 
 const userSchema = new mongoose.Schema({
 
@@ -14,6 +13,7 @@ const userSchema = new mongoose.Schema({
         type: Date,
         default: () => new Date(Date.now() + 24 * 60 * 60 * 1000)
     },
+    tokenVersion: { type: Number, default: 0 },
 
     // * OPTIONAL DATA
     description: { type: String },
@@ -28,7 +28,8 @@ const userSchema = new mongoose.Schema({
         ref: "Settings",
     },
     activeTimetableId: {
-        type: String
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Timetable"
     },
 
     // * TODOS STACK

@@ -53,3 +53,17 @@ export const plainDateToDate = (plainDate) => {
         return null;
     }
 };
+
+/**
+ * Get today's PlainDate in the user's timezone, falling back to Asia/Kolkata
+ * @param {string} timezone
+ * @returns {Temporal.PlainDate}
+ */
+export const safePlainDateISO = (timezone) => {
+  try {
+    return Temporal.Now.plainDateISO(timezone);
+  } catch (err) {
+    console.warn(`Invalid timezone "${timezone}", falling back to Asia/Kolkata`);
+    return Temporal.Now.plainDateISO('Asia/Kolkata');
+  }
+};

@@ -1,0 +1,290 @@
+import bcrypt from "bcryptjs";
+import crypto from 'crypto'
+import config from "../../../config/config.js"
+import settingsModel from "../../../models/settings.model.js"
+import userModel from "../../../models/user.model.js";
+import sessionModel from "../../../models/session.model.js";
+import notificationModel from "../../../models/notification.model.js"
+import mongoose from "mongoose";
+import timetableModel from "../../../models/timetable.model.js";
+
+
+// * FETCH USER
+export const fetchUser = async (req, res) => {
+  try {
+    const userId = req.userId
+    const user = await userModel.findById(userId).select("-password")
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' })
+    }
+
+    const settings = await settingsModel.findOne({ userId: user._id })
+    if (!settings) {
+      return res.status(404).json({ success: false, message: 'Settings not found!' })
+    }
+
+    return res.status(200).json({
+      success: true,
+      user,
+      settings
+    })
+  } catch (error) {
+    console.log(error)
+    return res.status(500).json({
+      success: false,
+      message: "Server Error at fetchUser route",
+    })
+  }
+}
+
+// * UPDATE PROFILE
+export const updateUser = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const settings = await settingsModel.findOne({ userId });
+    if (!settings) { return res.status(404).json({ success: false, message: 'settings not found' }); }
+
+    const updates = req.validatedBody;
+    if (!updates || Object.keys(updates).length === 0) {
+      return res.status(400).json({ success: false, message: 'no updates' });
+    }
+    if (Object.keys(updates).length > 50) {
+      return res.status(400).json({ success: false, message: 'to many updates' });
+    }
+
+    let userFieldsChanged = false;
+    let settingsFieldsChanged = false;
+    const otpEnabled = updates.password?.twoFactorEnabled;
+
+    for (const [updateKey, updateObj] of Object.entries(updates)) {
+      if (updateKey === 'profile' || updateKey === 'account') {
+        const userUpdates = {};
+        if (updateObj.username !== undefined) userUpdates.username = updateObj.username;
+        if (updateObj.timezone !== undefined) userUpdates.timezone = updateObj.timezone;
+
+        if (Object.keys(userUpdates).length > 0) {
+          await userModel.findByIdAndUpdate(userId, { $set: userUpdates });
+          userFieldsChanged = true;
+        }
+
+        if (updateObj.timezone !== undefined) {
+          await settingsModel.findByIdAndUpdate(settings._id, { $set: { timezone: updateObj.timezone } });
+        }
+      }
+
+      if (updateKey === 'reminders' || updateKey === 'notifications') {
+        await settingsModel.findByIdAndUpdate(settings._id, { $set: updateObj }, { new: true });
+        settingsFieldsChanged = true;
+      }
+
+      if (updateKey === 'password') {
+        await settingsModel.findByIdAndUpdate(
+          settings._id,
+          { $set: { authLoginVerificationByOtp: updateObj.twoFactorEnabled } }
+        );
+      }
+
+      if (updateKey === 'appearance') {
+        await settingsModel.findByIdAndUpdate(settings._id, { $set: updateObj }, { new: true });
+        settingsFieldsChanged = true;
+      }
+    }
+
+    try {
+      if (userFieldsChanged) {
+        await notificationModel.create({
+          userId,
+          type: 'user',
+          title: 'Profile Updated',
+          message: 'Your username or timezone was updated.',
+          status: 'sent',
+          notificationKey: `update_settings_${userId}_${crypto.randomUUID()}`
+        });
+      }
+
+      if (settingsFieldsChanged) {
+        await notificationModel.create({
+          userId,
+          type: 'system',
+          title: 'Settings Updated',
+          message: 'Your account settings were updated.',
+          status: 'sent',
+          notificationKey: `update_settings_${userId}_${crypto.randomUUID()}`
+        });
+      }
+
+      if (otpEnabled !== undefined) {
+        const message = otpEnabled
+          ? 'Two-factor authentication has been enabled on your account. You\u2019ll now be asked for an OTP each time you log in.'
+          : 'Two-factor authentication has been disabled on your account. Logins will no longer require an OTP.';
+
+        await notificationModel.create({
+          userId,
+          type: 'user',
+          title: 'Two-Factor Authentication',
+          message,
+          status: 'sent',
+          notificationKey: `update_settings_${userId}_${crypto.randomUUID()}`
+        });
+      }
+    } catch (notifyErr) {
+      if (notifyErr.code === 11000) {
+        console.log('Duplicate notification key, skipping — not a real error');
+      } else {
+        console.log('Failed to create settings-update notification:', notifyErr);
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'update done',
+      updateCount: Object.keys(updates).length,
+    });
+
+  } catch (error) {
+    console.log(error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server Error at UpdateUser route"
+    });
+  }
+};
+
+// * UPDATE PASSWORD
+export const updatePassword = async (req, res) => {
+  try {
+    const { password, newPassword } = req.validatedBody
+    const userId = req.userId
+    const user = await userModel.findById(userId)
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" })
+    }
+    const isValid = await bcrypt.compare(password, user.password)
+    if (!isValid) {
+      return res.status(400).json({ success: false, message: "Invalid Password" })
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10)
+    await userModel.findByIdAndUpdate(userId, { password: hashedPassword, $inc: { tokenVersion: 1 } })
+    await sessionModel.updateMany({ userId, revoked: false }, { $set: { revoked: true } })
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: config.NODE_ENV === "production",
+      sameSite: "strict"
+    })
+    return res.status(200).json({
+      success: true,
+      message: "user password updated"
+    })
+
+  } catch (error) {
+    console.log(error.message)
+    return res.status(500).json({
+      success: false,
+      message: "Server Error at update password route"
+    })
+  }
+}
+
+// * FETCH SESSIONS
+export const sessions = async (req, res) => {
+  try {
+    const userId = req.userId
+    const devices = await sessionModel.aggregate([
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+        }
+      },
+      {
+        $sort: { lastTime: -1 }
+      },
+      {
+        $group: {
+          _id: "$deviceId",
+          session: { $first: "$$ROOT" }
+        }
+      },
+      {
+        $replaceRoot: {
+          newRoot: "$session"
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          deviceId: 1,
+          browser: 1,
+          os: 1,
+          location: 1,
+          lastTime: 1,
+          expiresAt: 1,
+          revoked: 1
+        }
+      }
+    ])
+
+    return res.status(200).json({ success: true, message: 'all sessions', session: devices })
+
+  } catch (error) {
+    console.log(error)
+    return res.status(500).json({
+      success: false,
+      message: "Server Error at sessions get route"
+    })
+  }
+}
+
+// * FETCH ALL TIMETABLES
+export const timetables = async (req, res) => {
+  try {
+    const userId = req.userId
+    const timeTables = await timetableModel.find({ userId, isActive: true })
+
+    return res.status(200).json({
+      success: true,
+      timeTables
+    })
+  } catch (error) {
+    console.log(error)
+    return res.status(500).json({
+      success: false,
+      message: "Server Error at timetables get route",
+    })
+  }
+}
+
+// * UPDATE PROFILE PIC
+export const uploadProfileImg = async (req, res) => {
+  try {
+    const userId = req.userId
+    const { url, publicId } = req.body || {}
+
+    if (!url) {
+      return res.status(400).json({ success: false, message: "Profile image url is required" })
+    }
+
+    const user = await userModel.findByIdAndUpdate(
+      userId,
+      { $set: { profileImg: { url, publicId: publicId || "" } } },
+      { new: true }
+    ).select("-password")
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" })
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile image updated",
+      user
+    })
+  } catch (error) {
+    console.log(error)
+    return res.status(500).json({
+      success: false,
+      message: "Error At upload Profile Img!"
+    })
+  }
+}

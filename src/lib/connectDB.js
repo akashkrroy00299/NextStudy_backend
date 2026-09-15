@@ -1,17 +1,18 @@
 import mongoose from "mongoose";
 import config from "../config/config.js";
 
-// import dns from "dns"
-// dns.setServers(["8.8.8.8", "8.8.4.4"])
-
 const connectDB = async () => {
     try {
-        const connection = await mongoose.connect(config.MONGO_URL)
+        await mongoose.connect(config.MONGO_URL)
         console.log("mongoDB connected")
     } catch (error) {
         console.log("Error at ConnectDB", error)
-        process.exit(1)
+        throw error
     }
 }
+
+mongoose.connection.on("error", (err) => console.error("MongoDB connection error:", err));
+mongoose.connection.on("disconnected", () => console.warn("MongoDB disconnected"));
+mongoose.connection.on("reconnected", () => console.log("MongoDB reconnected"));
 
 export default connectDB

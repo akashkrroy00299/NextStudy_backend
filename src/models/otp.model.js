@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { formatDateTimeDDMMYYYY } from "../utils/dateUtil.js";
 
 const otpSchema = new mongoose.Schema({
     email: {type: String, required: true, unique: true},
@@ -7,16 +6,13 @@ const otpSchema = new mongoose.Schema({
     purpose: {
         type: String,
         required: true,
-        enum: ["register", "reset-password"]
+        enum: ["register", "reset-password", "login"]
     },
     attempts: { type: Number, required: true, default: 0},
     expAt: {type: Date, required: true}
 }, { timestamps: true })
 
-// Virtual to get formatted datetime as dd.mm.yyyy HH:mm:ss
-otpSchema.virtual("expAtFormatted").get(function() {
-    return formatDateTimeDDMMYYYY(this.expAt);
-});
+otpSchema.index({ expAt: 1 }, { expireAfterSeconds: 0 })
 
 const otpModel = mongoose.model("Otp", otpSchema)
 export default otpModel

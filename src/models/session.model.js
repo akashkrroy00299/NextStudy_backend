@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { formatDateTimeDDMMYYYY } from "../utils/dateUtil.js";
 
 const sessionSchema = new mongoose.Schema({
     userId: {
@@ -10,7 +9,7 @@ const sessionSchema = new mongoose.Schema({
     },
 
     browser: { type: String, required: true },
-    diviceId: { type: String, required: true },
+    deviceId: { type: String, required: true },
     location: { type: String, required: true },
     lastTime: { type: Date, required: true },
     os: { type: String, required: true },
@@ -26,10 +25,8 @@ const sessionSchema = new mongoose.Schema({
     revoked: { type: Boolean, default: false}
 }, { timestamps: true })
 
-// Virtual to get formatted datetime as dd.mm.yyyy HH:mm:ss
-sessionSchema.virtual("expiresAtFormatted").get(function() {
-    return formatDateTimeDDMMYYYY(this.expiresAt);
-});
+sessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 })
+sessionSchema.index({ refreshTokenHash: 1 })
 
 const sessionModel = mongoose.model("Session", sessionSchema)
 export default sessionModel

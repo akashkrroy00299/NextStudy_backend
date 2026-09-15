@@ -3,7 +3,7 @@ import config from "../config/config.js";
 import userModel from "../models/user.model.js";
 
 // * PROTECTOR OF ROUTES
-export const verifyUser = (req, res, next) => {
+export const verifyUser = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -13,6 +13,21 @@ export const verifyUser = (req, res, next) => {
 
         if (!token) { return res.status(401).json({ message: "Malformed token" }); }
         const decoded = jwt.verify(token, config.ACCESS_TOKEN_SECRET);
+
+        const user = await userModel.findById(decoded.userId);
+        if (!user || user.isVerified !== true) {
+            return res.status(401).json({
+                success: false,
+                message: "Account not found or not verified"
+            });
+        }
+
+        if (user.tokenVersion !== (decoded.version ?? 0)) {
+            return res.status(401).json({
+                success: false,
+                message: "Session expired, please login again"
+            });
+        }
 
         req.userId = decoded.userId;
         next();

@@ -1,9 +1,9 @@
 import geoip from 'geoip-lite'
 
 export const getLocationFromRequest = (req) => {
-  const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress
+  const ip = req.ip || req.socket.remoteAddress || null
 
-  const geo = geoip.lookup(ip)
+  const geo = ip ? geoip.lookup(ip) : null
 
   const location = geo
     ? `${geo.city || 'Unknown city'}, ${geo.country}`

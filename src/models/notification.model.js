@@ -44,7 +44,10 @@ const schema = new mongoose.Schema({
 
 schema.index(
     { createdAt: 1 },
-    { expireAfterSeconds: 60 * 60 * 24 * 7 }
+    {
+        expireAfterSeconds: 60 * 60 * 24 * 7,
+        partialFilterExpression: { isRead: true }
+    }
 )
 
 const notificationModel = mongoose.model("Notification", schema)
